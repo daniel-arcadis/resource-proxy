@@ -395,7 +395,6 @@ public class proxy : IHttpHandler {
     /// <param name="toResponse">The response that we are copying the headers to</param>
     private void copyResponseHeaders(System.Net.WebResponse fromResponse, HttpResponse toResponse)
     {
-        string headerValueOrigin = null;
         foreach (var headerKey in fromResponse.Headers.AllKeys)
         {
             switch (headerKey.ToLower())
@@ -404,8 +403,6 @@ public class proxy : IHttpHandler {
                 case "transfer-encoding":
                 case "accept-ranges":   // Prevent requests for partial content
                 case "access-control-allow-origin":
-                    headerValueOrigin = fromResponse.Headers[headerKey];
-                    continue;
                 case "access-control-allow-credentials":
                 case "access-control-expose-headers":
                 case "access-control-max-age":
@@ -415,38 +412,6 @@ public class proxy : IHttpHandler {
                     break;
             }
         }
-
-        // Determine a single Access-Control-Allow-Origin value and add the header once.
-        string allowOriginValue = null;
-        try
-        {
-            string requestOrigin = null;
-            if (HttpContext.Current != null && HttpContext.Current.Request != null)
-                requestOrigin = HttpContext.Current.Request.Headers["Origin"];
-
-            string requestReferrer = null;
-            if (string.IsNullOrEmpty(requestOrigin) && HttpContext.Current != null && HttpContext.Current.Request != null && HttpContext.Current.Request.UrlReferrer != null)
-                requestReferrer = HttpContext.Current.Request.UrlReferrer.GetLeftPart(UriPartial.Authority);
-
-            if (!string.IsNullOrEmpty(requestOrigin))
-            {
-                allowOriginValue = requestOrigin;
-            }
-            else if (!string.IsNullOrEmpty(requestReferrer))
-            {
-                allowOriginValue = requestReferrer;
-            }
-        }
-        catch
-        {
-            allowOriginValue = null;
-        }
-
-        if (!string.IsNullOrEmpty(allowOriginValue))
-        {
-            toResponse.AddHeader("Access-Control-Allow-Origin", allowOriginValue);
-        }
-
         // Reset the content-type for OGC WMS - issue #367
         // Note: this might not be what everyone expects, but it helps some users
         // TODO: make this configurable
